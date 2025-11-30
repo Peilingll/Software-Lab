@@ -1,0 +1,14 @@
+# --- 1.  ---
+ckpt/
+logs/
+batches/
+batches_2nd/
+data/4th/
+data/Builing_2/
+script/backup/
+
+# --- 2. Python pycache ---
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
