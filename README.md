@@ -39,7 +39,7 @@ Software-Lab/
 Regardless of whether you use Docker or Conda, **you must download the model weights first**.
 
 1.  **Download** the `sonata.pth` and `sonata_linear_prob_head_sc.pth` from the link below:
-    **[Google Drive: Checkpoints & Test Data](https://drive.google.com/drive/folders/1IMTsD6btyR7csem7WaTh6m9fsp7lszRK?usp=sharing)**
+    👉 **[Google Drive: Checkpoints & Test Data](https://drive.google.com/drive/folders/1IMTsD6btyR7csem7WaTh6m9fsp7lszRK?usp=sharing)**
 2.  **Place the `.pth` files** into the `ckpt/` directory.
 
 > **Note**: The pipeline will fail immediately if these files are missing.
@@ -50,16 +50,28 @@ Regardless of whether you use Docker or Conda, **you must download the model wei
 
 This project includes a Docker setup to ensure a consistent environment with CUDA 12.4 support. This is the best way to run the project on a new machine.
 
-### 1\. Build the Image
+### 1\. Get the Code
 
-Ensure you have the checkpoints in `ckpt/` before building.
+Clone the repository and switch to the development branch containing the Docker configuration.
+
+```bash
+git clone [https://github.com/Peilingll/Software-Lab.git](https://github.com/Peilingll/Software-Lab.git)
+cd Software-Lab
+
+# Switch to the branch with Docker support
+git checkout docker-dev
+```
+
+### 2\. Build the Image
+
+Ensure you have placed the checkpoints in `ckpt/` before building.
 
 ```bash
 # Run this in the project root
 docker build -t sonata-pipeline .
 ```
 
-### 2\. Run the Pipeline
+### 3\. Run the Pipeline
 
 You must mount your local data and output directories so the container can access files and save results to your disk.
 
