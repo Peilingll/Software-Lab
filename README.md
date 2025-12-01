@@ -1,7 +1,9 @@
+````markdown
 # Real-Time Point Cloud to BIM Pipeline 
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Supported-blue)](https://www.docker.com/)
 
 This project implements an **automated pipeline** for processing Point Cloud data. It leverages the Sonata framework to convert raw scans into structured BIM information.
 
@@ -9,13 +11,16 @@ This project implements an **automated pipeline** for processing Point Cloud dat
 - **Automatic Processing**: Fully automated pipeline converting raw `.las` point clouds to IFC models.
 - **Deep Learning Integration**: Uses `sonata_full_pipeline.py` (located in the `sonata/` folder) for intelligent processing.
 - **Real-time capable**: Designed for efficient processing of point cloud scans.
+- **Dockerized**: Includes a containerized environment for easy deployment across different machines.
 
 ## 📂 Project Structure
 
 ```text
 Software-Lab/
 ├── batches/                # 📂 Output folder for processed results
-├── ckpt/                   # ⚠️ Model weights (Download required) 
+├── ckpt/                   # ⚠️ Model weights (Download Required) 
+│   ├── sonata.pth
+│   └── sonata_linear_prob_head_sc.pth
 ├── data/
 │   └── scans/              # 📂 Place your input .las files here
 ├── logs/                   # Execution logs (Auto-generated)
@@ -23,26 +28,68 @@ Software-Lab/
 ├── sonata/                 # Sonata deep learning submodule
 │   └── sonata_full_pipeline.py
 ├── environment.yml         # Conda environment configuration
-├── pipeline_runner.py      # 🚀 Main entry script
+├── Dockerfile              # Docker configuration
+├── .dockerignore           # Docker build ignore list
+├── pipeline_runner.py      # Main entry script
 └── README.md
 ````
 
-## 🛠️ Installation & Environment
+## ⚠️ Prerequisites (Crucial)
 
-The environment is managed via Conda. Please ensure you have [Anaconda](https://www.anaconda.com/) or Miniconda installed.
+Regardless of whether you use Docker or Conda, **you must download the model weights first**.
 
-### 1\. Clone the repository
+1.  **Download** the `sonata.pth` and `sonata_linear_prob_head_sc.pth` from the link below:
+    **[Google Drive: Checkpoints & Test Data](https://drive.google.com/drive/folders/1IMTsD6btyR7csem7WaTh6m9fsp7lszRK?usp=sharing)**
+2.  **Place the `.pth` files** into the `ckpt/` directory.
+
+> **Note**: The pipeline will fail immediately if these files are missing.
+
+-----
+
+## 🐳 Option A: Docker Usage (Recommended)
+
+This project includes a Docker setup to ensure a consistent environment with CUDA 12.4 support. This is the best way to run the project on a new machine.
+
+### 1\. Build the Image
+
+Ensure you have the checkpoints in `ckpt/` before building.
 
 ```bash
-git clone https://github.com/Peilingll/Software-Lab.git
-cd Software-Lab
+# Run this in the project root
+docker build -t sonata-pipeline .
 ```
 
-### 2\. Setup Environment
+### 2\. Run the Pipeline
 
-This project uses a dedicated Conda environment named `sonata2`.
+You must mount your local data and output directories so the container can access files and save results to your disk.
 
 ```bash
+# Replace '/path/to/your/data' with your actual local path containing the 'scans' folder
+docker run --gpus all \
+  -v /path/to/your/data:/app/data \
+  -v $(pwd)/batches_output:/app/batches \
+  sonata-pipeline
+```
+
+  * **`--gpus all`**: Enables GPU support (Required).
+  * **`-v ...:/app/data`**: Maps your local input scans to the container.
+  * **`-v ...:/app/batches`**: Maps the container's output to your local folder.
+
+-----
+
+## 🛠️ Option B: Local Installation (Conda)
+
+If you prefer to run locally without Docker, follow these steps.
+
+### 1\. Setup Environment
+
+The environment is managed via Conda.
+
+```bash
+# Clone the repository
+git clone [https://github.com/Peilingll/Software-Lab.git](https://github.com/Peilingll/Software-Lab.git)
+cd Software-Lab
+
 # Create the environment from the provided config
 conda env create -f environment.yml
 
@@ -50,29 +97,9 @@ conda env create -f environment.yml
 conda activate sonata2
 ```
 
-### 3\. Download Checkpoints (Crucial)
+### 2\. Run Pipeline
 
-The model weights are too large for GitHub and must be downloaded separately.
-
-1.  **Download** the `sonata.pth` and testing data from the link below:
-    👉 **[Google Drive: Checkpoints & Test Data](https://drive.google.com/drive/folders/1IMTsD6btyR7csem7WaTh6m9fsp7lszRK?usp=sharing)**
-2.  **Place the `.pth` files** into the `ckpt/` directory.
-
-> ⚠️ **Warning**: The pipeline will fail immediately if `ckpt/sonata.pth` and `sonata_linear_prob_head_sc.pth` are missing.
-
-## 🚀 Usage
-
-### Step 1: Prepare Data
-
-Ensure your point cloud scans are in **`.las`** format and place them in the input directory:
-
-```text
-data/scans/
-```
-
-### Step 2: Run Pipeline
-
-Execute the main runner script. This will sequentially trigger the segmentation and reconstruction modules.
+Ensure your `.las` files are in `data/scans/`.
 
 ```bash
 # Ensure environment is active
@@ -82,9 +109,9 @@ conda activate sonata2
 python pipeline_runner.py
 ```
 
-### Step 3: Check Results
+## 📊 Outputs
 
-  - **Processed Models**: Check the `batches/` folder for output files.
+  - **Processed Models**: Check the `batches/` folder (or your mounted output folder if using Docker).
   - **Logs**: Check `logs/` for detailed processing information or error tracing.
 
 <!-- end list -->

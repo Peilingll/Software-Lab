@@ -1,0 +1,24 @@
+# 1. Ignore Data & Outputs (Crucial for size)
+data/
+
+# 2. Ignore Intermediate Outputs
+batches/
+batches_2nd/
+batches_4th/
+logs/
+
+# 3. Ignore Version Control & IDE configs
+output/
+output_clean/
+per_wall/
+backup/
+
+.git
+.gitignore
+.idea
+.vscode
+
+# 4. Ignore Python Cache
+__pycache__
+*.pyc
+.ipynb_checkpoints
