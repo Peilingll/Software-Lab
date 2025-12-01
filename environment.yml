@@ -1,5 +1,6 @@
 name: sonata2
 channels:
+  - nodefaults
   - pytorch
   - nvidia
   - nvidia/label/cuda-12.4.1
