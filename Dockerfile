@@ -5,6 +5,7 @@ FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 WORKDIR /app
 
 # 3. System Dependencies
+# Install basic tools and graphics libraries required by Open3D
 RUN apt-get update && apt-get install -y \
     wget \
     git \
@@ -21,16 +22,25 @@ RUN wget \
     && bash Miniconda3-latest-Linux-x86_64.sh -b \
     && rm -f Miniconda3-latest-Linux-x86_64.sh 
 
-# 5. Environment Setup
+# 5. Configure Conda
+# Add conda-forge, set priority to flexible (fixes solver errors), and accept ToS
+RUN conda config --add channels conda-forge \
+    && conda config --set channel_priority flexible \
+    && conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main \
+    && conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# 6. Environment Setup
 COPY environment.yml .
 RUN conda env create -f environment.yml
 
-# 6. Shell Config
+# 7. Shell Config
+# Ensure all subsequent commands run inside the 'sonata2' environment
 SHELL ["conda", "run", "-n", "sonata2", "/bin/bash", "-c"]
 
-# 7. Copy Files (data/ is ignored by .dockerignore)
+# 8. Copy Files
+# Note: huge data folders are excluded via .dockerignore
 COPY . .
 
-# 8. Permissions & Entry
+# 9. Permissions & Entry
 RUN chmod +x pipeline_runner.py
 ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "sonata2", "python", "pipeline_runner.py"]

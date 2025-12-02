@@ -1,11 +1,12 @@
-````markdown
 # Real-Time Point Cloud to BIM Pipeline 
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Supported-blue)](https://www.docker.com/)
+[![Docker Image Version](https://img.shields.io/docker/v/peilingll/sonata-pipeline?sort=semver&label=Docker%20Image&logo=docker&logoColor=white)](https://hub.docker.com/r/peilingll/sonata-pipeline)
 
 This project implements an **automated pipeline** for processing Point Cloud data. It leverages the Sonata framework to convert raw scans into structured BIM information.
+
+>  **Docker Hub**: The pre-built image is available at [peilingll/sonata-pipeline](https://hub.docker.com/r/peilingll/sonata-pipeline).
 
 ## 🌟 Key Features
 - **Automatic Processing**: Fully automated pipeline converting raw `.las` point clouds to IFC models.
@@ -18,7 +19,7 @@ This project implements an **automated pipeline** for processing Point Cloud dat
 ```text
 Software-Lab/
 ├── batches/                # 📂 Output folder for processed results
-├── ckpt/                   # ⚠️ Model weights (Download Required) 
+├── ckpt/                   # ⚠️ Model weights
 │   ├── sonata.pth
 │   └── sonata_linear_prob_head_sc.pth
 ├── data/
@@ -32,60 +33,62 @@ Software-Lab/
 ├── .dockerignore           # Docker build ignore list
 ├── pipeline_runner.py      # Main entry script
 └── README.md
+
 ````
 
-## ⚠️ Prerequisites (Crucial)
+## ⚠️ Prerequisites
 
-Regardless of whether you use Docker or Conda, **you must download the model weights first**.
+### For Docker Users:
 
-1.  **Download** the `sonata.pth` and `sonata_linear_prob_head_sc.pth` from the link below:
-    👉 **[Google Drive: Checkpoints & Test Data](https://drive.google.com/drive/folders/1IMTsD6btyR7csem7WaTh6m9fsp7lszRK?usp=sharing)**
-2.  **Place the `.pth` files** into the `ckpt/` directory.
+The pre-built image (`v1`) already includes these weights(ckpt/). You only need your input data (`.las` files).
 
-> **Note**: The pipeline will fail immediately if these files are missing.
+### For Local (Conda) Users:
+
+You **must download the model weights first**.
+
+1.  **Download** `sonata.pth` and `sonata_linear_prob_head_sc.pth`:
+    **[Google Drive: Checkpoints & Test Data](https://drive.google.com/drive/folders/1IMTsD6btyR7csem7WaTh6m9fsp7lszRK?usp=sharing)**
+2.  **Place the files** into the `ckpt/` directory.
 
 -----
 
 ## 🐳 Option A: Docker Usage (Recommended)
 
-This project includes a Docker setup to ensure a consistent environment with CUDA 12.4 support. This is the best way to run the project on a new machine.
+This is the easiest way to run the project without configuring environments manually.
 
-### 1\. Get the Code
+### 1\. Run the Pipeline (Quick Start)
 
-Clone the repository and switch to the development branch containing the Docker configuration.
+You can run the pipeline immediately using the pre-built image from Docker Hub. Docker will automatically download it if it's not on your computer.
 
-```bash
-git clone [https://github.com/Peilingll/Software-Lab.git](https://github.com/Peilingll/Software-Lab.git)
-cd Software-Lab
-
-# Switch to the branch with Docker support
-git checkout docker-dev
-```
-
-### 2\. Build the Image
-
-Ensure you have placed the checkpoints in `ckpt/` before building.
-
-```bash
-# Run this in the project root
-docker build -t sonata-pipeline .
-```
-
-### 3\. Run the Pipeline
-
-You must mount your local data and output directories so the container can access files and save results to your disk.
+**Command:**
+You must mount your local data and output directories so the container can access your files.
 
 ```bash
 # Replace '/path/to/your/data' with your actual local path containing the 'scans' folder
 docker run --gpus all \
   -v /path/to/your/data:/app/data \
   -v $(pwd)/batches_output:/app/batches \
-  sonata-pipeline
+  peilingll/sonata-pipeline:v1
 ```
 
   * **`--gpus all`**: Enables GPU support (Required).
   * **`-v ...:/app/data`**: Maps your local input scans to the container.
   * **`-v ...:/app/batches`**: Maps the container's output to your local folder.
+  * **`peilingll/sonata-pipeline:v1`**: The official image name.
+
+### 2\. Build from Source 
+
+Only follow this step if you are a developer modifying the `Dockerfile`.
+
+```bash
+# 1. Clone repo and switch branch
+git clone [https://github.com/Peilingll/Software-Lab.git](https://github.com/Peilingll/Software-Lab.git)
+cd Software-Lab
+git checkout docker-dev
+
+# 2. Build manually (Ensure ckpt/ contains .pth files first)
+docker build -t sonata-pipeline .
+```
 
 -----
 
@@ -111,7 +114,7 @@ conda activate sonata2
 
 ### 2\. Run Pipeline
 
-Ensure your `.las` files are in `data/scans/`.
+Ensure your `.las` files are in `data/scans/` and checkpoints are in `ckpt/`.
 
 ```bash
 # Ensure environment is active
