@@ -1,8 +1,3 @@
-
-
------
-
-````markdown
 # Real-Time Point Cloud to BIM Pipeline 
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
