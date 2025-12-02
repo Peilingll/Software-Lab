@@ -52,28 +52,39 @@ You **must download the model weights first**.
 
 -----
 
-## 🐳 Option A: Docker Usage (Recommended)
+### 🐳 Option A: Docker Usage (Recommended)
 
-This is the easiest way to run the project without configuring environments manually.
+This is the easiest way to run the project. No need to install Python or download weights manually.
 
-### 1\. Run the Pipeline (Quick Start)
+### 1. File Preparation (Important)
 
-You can run the pipeline immediately using the pre-built image from Docker Hub. Docker will automatically download it if it's not on your computer.
+Before running, create a workspace folder on your computer with the following structure.
+**Note:** The subfolder name `scans` is mandatory.
 
-**Command:**
-You must mount your local data and output directories so the container can access your files.
+```text
+my_workspace/           # You can name this root folder whatever you want
+├── scans/              # ⚠️ MUST create a folder named 'scans' here!
+│   ├── area1.las       # Place your .las files inside
+│   └── area2.las
+└── results/            # 📂 Create an empty folder for outputs
+
+### 2. Run the Pipeline
+
+Open your terminal, navigate to your workspace folder (cd my_workspace), and run the following command.
+
+Docker will automatically download the image (peilingll/sonata-pipeline:v1) if it is missing.
 
 ```bash
-# Replace '/path/to/your/data' with your actual local path containing the 'scans' folder
+# Docker will map the current folder "$(pwd)" to the container
 docker run --gpus all \
-  -v /path/to/your/data:/app/data \
-  -v $(pwd)/batches_output:/app/batches \
+  -v $(pwd):/app/data \
+  -v $(pwd)/results:/app/batches \
   peilingll/sonata-pipeline:v1
 ```
 
   * **`--gpus all`**: Enables GPU support (Required).
-  * **`-v ...:/app/data`**: Maps your local input scans to the container.
-  * **`-v ...:/app/batches`**: Maps the container's output to your local folder.
+  * **`-v $(pwd):/app/data`**: Maps your current folder (containing the scans subfolder) to the container.
+  * **`-v $(pwd)/results:/app/batches`**: Maps your local results folder to receive the output files.
   * **`peilingll/sonata-pipeline:v1`**: The official image name.
 
 ### 2\. Build from Source 
