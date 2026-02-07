@@ -16,7 +16,11 @@ An automated pipeline for converting raw `.las` point cloud scans into IFC/BIM m
 
 ## Quick Start
 
-### 1. Prepare your data
+### 1. Download testing data
+
+Sample point cloud data for testing: [Google Drive](https://drive.google.com/drive/folders/1IMTsD6btyR7csem7WaTh6m9fsp7lszRK?usp=drive_link)
+
+### 2. Prepare your data
 
 ```text
 my_workspace/
@@ -26,7 +30,7 @@ my_workspace/
 └── results/            # Empty folder for outputs
 ```
 
-### 2. Run
+### 3. Run
 
 ```bash
 cd my_workspace
@@ -39,7 +43,7 @@ docker run --gpus all \
 
 Docker will automatically pull the image on first run. No Python installation or manual weight downloads needed -- everything is included in the image.
 
-### 3. Check results
+### 4. Check results
 
 - **Output files**: `results/` folder
 - **Logs**: printed to terminal (or use `docker logs` if running detached)
@@ -97,3 +101,9 @@ Software-Lab/
 ├── pipeline_runner.py      # Main entry script
 └── README.md
 ```
+
+---
+
+## Acknowledgements
+
+This project is built upon [Sonata](https://github.com/facebookresearch/sonata) by Facebook Research.
