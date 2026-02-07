@@ -86,25 +86,25 @@ class PipelineRunner:
                 text=True, encoding='utf-8', env=env
             )
             
-            # Stream the output
+            # Stream the output with timeout
+            start_time = time.time()
             while True:
+                if time.time() - start_time > timeout:
+                    process.kill()
+                    process.wait()
+                    return False, f"Timeout after {timeout}s"
                 output = process.stdout.readline()
                 if output == '' and process.poll() is not None:
                     break
                 if output:
                     print(f"    > {output.strip()}")
-            
+
             # Check final return code
             if process.returncode != 0:
                 print(f"  [Error] Command failed, return code: {process.returncode}")
                 return False, f"Return code {process.returncode}"
-                
+
             return True, "Success"
-            
-        except subprocess.TimeoutExpired:
-            print(f"  [Error] Command timed out ({timeout}s)")
-            process.kill()
-            return False, "Timeout"
         except Exception as e:
             print(f"  [Error] Unexpected error: {e}")
             return False, str(e)
@@ -157,7 +157,7 @@ class PipelineRunner:
         except Exception as e:
             print(f"  [Error] Failed to archive {batch_name}: {e}")
 
-    def process_single_batch(self, las_file, batch_name, fixed_thickness=None):
+    def process_single_batch(self, las_file, batch_name):
         """Run the full 01-06 pipeline for a single .las file."""
         print(f"\n{'='*60}")
         print(f"Processing Batch: {batch_name} (Source: {las_file.name})")
@@ -188,7 +188,8 @@ class PipelineRunner:
             
             # 2. Sonata
             print("\n[1/7] Running Sonata Semantic Segmentation...")
-            success, _ = self.run_command([sys.executable, str(self.sonata_script), str(las_file)])
+            success, _ = self.run_command([sys.executable, str(self.sonata_script), str(las_file),
+                                          "--output-dir", str(self.work_output)])
             if not success: raise Exception("Sonata (1/7) failed")
             
             sonata_output_npz = self.work_output / "merged_classification.npz"
@@ -298,13 +299,11 @@ class PipelineRunner:
             shutil.rmtree(viz_dir, ignore_errors=True)
 
 
-    def batch_mode(self, source="scans", grace_period=15, thickness=None):
+    def batch_mode(self, source="scans", grace_period=15):
         """
         Auto-stopping batch mode.
         """
         print(f"\n--- Starting Auto-Batch Mode (Grace Period: {grace_period}s) ---")
-        if thickness:
-            print(f"--- Using Fixed Wall Thickness: {thickness}m ---")
         
         try:
             while True:
@@ -322,8 +321,8 @@ class PipelineRunner:
                     for i, las_file in enumerate(new_files_to_process, 1):
                         print(f"\n--- Processing {i}/{len(new_files_to_process)} ---")
                         batch_name = self.get_batch_name(las_file)
-                        self.process_single_batch(las_file, batch_name, fixed_thickness=thickness)
-                
+                        self.process_single_batch(las_file, batch_name)
+
                 print(f"\nProcessing complete. Waiting {grace_period}s for new files...")
                 time.sleep(grace_period)
                 
@@ -343,16 +342,14 @@ class PipelineRunner:
         print(f"Batch processing finished!")
         print(f"All results are in: {self.batches_dir}/")
 
-    def watch_mode(self, source="scans", interval=30, thickness=None):
+    def watch_mode(self, source="scans", interval=30):
         """
         Permanent watch mode.
         """
         print(f"\n{'='*60}")
         print(f"--- Starting Permanent Watch Mode ---")
         print(f"--- (Interval: {interval}s) ---")
-        if thickness:
-            print(f"--- Using Fixed Wall Thickness: {thickness}m ---")
-        print("💡 Press Ctrl+C to stop.")
+        print("Press Ctrl+C to stop.")
         print(f"{'='*60}\n")
         
         try:
@@ -364,7 +361,7 @@ class PipelineRunner:
                     print(f"\n✓ Found {len(new_files)} new files, starting...")
                     for las_file in new_files:
                         batch_name = self.get_batch_name(las_file)
-                        self.process_single_batch(las_file, batch_name, fixed_thickness=thickness)
+                        self.process_single_batch(las_file, batch_name)
                     print("\nFinished processing queue, returning to watch...")
                 else:
                     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -395,9 +392,6 @@ def main():
                        help="batch (default): Auto-stop | watch: Permanent")
     parser.add_argument("--interval", type=int, default=15,
                        help="Grace period (batch) or poll interval (watch) in seconds.")
-    parser.add_argument("--thickness", type=float, default=None,
-                       help="(Optional) Set a fixed thickness for all walls (e.g., 0.2 for 20cm)")
-    
     args = parser.parse_args()
     
     runner = PipelineRunner()
@@ -410,9 +404,9 @@ def main():
             sys.exit(1)
         
     if args.mode == "watch":
-        runner.watch_mode(args.source, args.interval, args.thickness)
+        runner.watch_mode(args.source, args.interval)
     else:
-        runner.batch_mode(args.source, grace_period=args.interval, thickness=args.thickness)
+        runner.batch_mode(args.source, grace_period=args.interval)
 
 if __name__ == "__main__":
     main()

@@ -16,6 +16,12 @@ dependencies:
   - pandas
   - scipy
   - open3d
+  - scikit-learn
+  - matplotlib
+  - huggingface_hub
+  - timm
+  - packaging
+  - plotly
   - pip:
     - spconv-cu124
     - laspy
@@ -25,3 +31,5 @@ dependencies:
     - tqdm
     - plyfile
     - h5py
+    - ifcopenshell
+    - torch-scatter

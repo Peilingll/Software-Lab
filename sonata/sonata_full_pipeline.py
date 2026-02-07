@@ -8,6 +8,7 @@ import torch.nn as nn
 import gc
 import os
 import sys
+import argparse
 from scipy.spatial import cKDTree
 
 # LAS processing imports
@@ -242,34 +243,22 @@ def las_to_npy(las_file_path, output_dir="output", save_npz=True, subsample_dist
         'intensity': intensity
     }
 
-def run_las_converter():
-    """Execute LAS conversion based on command line arguments"""
+def run_las_converter(las_file="alpha.las", subsample_distance=0.010, output_dir="output"):
+    """Execute LAS conversion"""
     print("\n" + "="*60)
     print("LAS FILE CONVERSION")
     print("="*60)
-    
-    # Default values
-    las_file = "alpha.las"
-    normal_method = 'vectorized'  # Fixed to vectorized only
-    subsample_distance = 0.010
-    
-    # Parse command line arguments
-    if len(sys.argv) > 1:
-        las_file = sys.argv[1]
-    if len(sys.argv) > 2:
-        try:
-            subsample_distance = float(sys.argv[2])
-        except ValueError:
-            print(f"Warning: Invalid subsample distance '{sys.argv[2]}', using default 0.010")
-            subsample_distance = 0.010
-    
+
+    normal_method = 'vectorized'
+
     print(f"Processing LAS file: {las_file}")
     print(f"Normal method: {normal_method} (fixed)")
     print(f"Subsample distance: {subsample_distance}m")
     
     try:
         # Convert LAS file with Sonata format for compatibility
-        data = las_to_npy(las_file, save_npz=True, subsample_distance=subsample_distance, 
+        data = las_to_npy(las_file, output_dir=output_dir, save_npz=True,
+                         subsample_distance=subsample_distance,
                          normal_method=normal_method, sonata_format=True)
         print("\nLAS conversion completed successfully!")
         
@@ -657,8 +646,7 @@ def export_floor_ceiling_and_remaining(original_coord, original_color, original_
     
     return floor_ceiling_file, remaining_file
 
-def run_round1():
-  
+def run_round1(output_dir="output"):
     """Execute Round 1: Floor/Ceiling Detection"""
     print("Starting Round 1 execution...")
 
@@ -677,7 +665,7 @@ def run_round1():
     try:
         model = sonata.model.load("ckpt/sonata.pth").to(DEVICE)
         print("Model loaded from local checkpoint")
-    except:
+    except Exception:
         custom_config = dict(
             enc_patch_size=[512 for _ in range(5)],
             enable_flash=False,
@@ -688,7 +676,7 @@ def run_round1():
     # Load segmentation head
     try:
         ckpt = sonata.load("ckpt/sonata_linear_prob_head_sc.pth", ckpt_only=True)
-    except:
+    except Exception:
         ckpt = sonata.load("sonata_linear_prob_head_sc", repo_id="facebook/sonata", ckpt_only=True)
     
     seg_head = SegHead(**ckpt["config"]).to(DEVICE)
@@ -707,7 +695,7 @@ def run_round1():
     transform = sonata.transform.Compose(config)
     
     # Load data
-    npz_data = np.load("output/complete.npz")
+    npz_data = np.load(os.path.join(output_dir, "complete.npz"))
     print("Available keys in NPZ file:", list(npz_data.keys()))
 
     original_coord = npz_data["coord"].astype(np.float32)
@@ -757,7 +745,8 @@ def run_round1():
     
     # Export floor/ceiling and remaining points
     floor_ceiling_file, remaining_file = export_floor_ceiling_and_remaining(
-        original_coord, original_color, original_normal, predictions_with_structure
+        original_coord, original_color, original_normal, predictions_with_structure,
+        output_dir=output_dir
     )
     
     return model, seg_head, transform
@@ -931,7 +920,7 @@ def save_as_ply_with_priority(coord, color, predictions, filename, num_floor_cei
     success = o3d.io.write_point_cloud(filename, pcd)
     return success
 
-def create_class_legend_file(filename="output/class_legend.txt"):
+def create_class_legend_file(filename="class_legend.txt"):
     """Create a text file with class labels and their corresponding colors"""
     print(f"Creating class legend file: {filename}")
     
@@ -949,12 +938,12 @@ def create_class_legend_file(filename="output/class_legend.txt"):
         f.write("- original_colors.ply: Points with original RGB colors\n")
         f.write("- Use MeshLab, CloudCompare, or similar tools to view PLY files\n")
 
-def run_round2(model, seg_head, transform):
+def run_round2(model, seg_head, transform, output_dir="output"):
     """Execute Round 2: Sonata Classification"""
     print("=== ROUND 2: PURE SONATA CLASSIFICATION ===")
-    
+
     # Load remaining points data
-    npz_data = np.load("output/remaining_points.npz")
+    npz_data = np.load(os.path.join(output_dir, "remaining_points.npz"))
     
     original_coord = npz_data["coord"].astype(np.float32)
     original_color = npz_data["color"].astype(np.float32)
@@ -999,28 +988,28 @@ def run_round2(model, seg_head, transform):
             print(f"Class {class_id:2d} ({class_name:15s}): {count:8d} points ({percentage:5.1f}%)")
     
     # Save results
-    np.savez("output/raw_sonata_classification.npz",
+    np.savez(os.path.join(output_dir, "raw_sonata_classification.npz"),
              coord=original_coord,
              color=original_color,
              normal=original_normal,
              predictions=final_predictions,
              class_names=CLASS_LABELS_20)
-    
+
     # Save PLY files
-    save_as_ply(original_coord, original_color, final_predictions, 
-                "output/semantic_classification.ply")
-    
-    save_original_color_ply(original_coord, original_color, 
-                           "output/original_colors.ply")
-    
-    create_class_legend_file()
+    save_as_ply(original_coord, original_color, final_predictions,
+                os.path.join(output_dir, "semantic_classification.ply"))
+
+    save_original_color_ply(original_coord, original_color,
+                           os.path.join(output_dir, "original_colors.ply"))
+
+    create_class_legend_file(os.path.join(output_dir, "class_legend.txt"))
     
     # === MERGE WITH FLOOR_CEILING.NPZ ===
     print("\n=== MERGING WITH FLOOR_CEILING DATA ===")
     
     try:
         # Load floor/ceiling data
-        floor_ceiling_data = np.load("output/floor_ceiling.npz")
+        floor_ceiling_data = np.load(os.path.join(output_dir, "floor_ceiling.npz"))
         
         floor_coord = floor_ceiling_data["coord"].astype(np.float32)
         floor_color = floor_ceiling_data["color"].astype(np.float32)
@@ -1051,7 +1040,7 @@ def run_round2(model, seg_head, transform):
         print(f"Total merged points: {len(merged_coord)}")
         
         # Save merged results
-        np.savez("output/merged_classification.npz",
+        np.savez(os.path.join(output_dir, "merged_classification.npz"),
                  coord=merged_coord,
                  color=merged_color,
                  predictions=merged_predictions,
@@ -1060,50 +1049,17 @@ def run_round2(model, seg_head, transform):
                  num_sonata_points=len(original_coord))
         
         # Save merged PLY files
-        save_as_ply_with_priority(merged_coord, merged_color, merged_predictions, 
-                                "output/merged_semantic_classification.ply",
+        save_as_ply_with_priority(merged_coord, merged_color, merged_predictions,
+                                os.path.join(output_dir, "merged_semantic_classification.ply"),
                                 num_floor_ceiling_points=len(floor_coord))
+
+        save_original_color_ply(merged_coord, merged_color,
+                               os.path.join(output_dir, "merged_original_colors.ply"))
         
-        save_original_color_ply(merged_coord, merged_color, 
-                               "output/merged_original_colors.ply")
-        
-        # === VISUALIZATION ===
-        print("\n=== LAUNCHING INTERACTIVE VISUALIZATION ===")
-        try:
-            pcd_semantic = o3d.io.read_point_cloud("output/merged_semantic_classification.ply")
-            pcd_original = o3d.io.read_point_cloud("output/merged_original_colors.ply")
-            
-            print("Loaded point clouds for visualization")
-            
-            # Create two visualizers for simultaneous display
-            vis1 = o3d.visualization.Visualizer()
-            vis2 = o3d.visualization.Visualizer()
-            
-            vis1.create_window(window_name="Semantic Classification", 
-                              width=800, height=600, left=50, top=50)
-            vis1.add_geometry(pcd_semantic)
-            
-            vis2.create_window(window_name="Original RGB Colors", 
-                              width=800, height=600, left=900, top=50)
-            vis2.add_geometry(pcd_original)
-            
-            print("Running interactive viewers...")
-            
-            while vis1.poll_events() and vis2.poll_events():
-                vis1.update_renderer()
-                vis2.update_renderer()
-            
-            vis1.destroy_window()
-            vis2.destroy_window()
-            
-            print("Visualization completed!")
-            
-        except Exception as e:
-            print(f"Visualization error: {e}")
-            print("PLY files are saved for external viewing.")
-        
+        print("\nPLY files saved. Use MeshLab or CloudCompare for visualization.")
+
     except FileNotFoundError:
-        print("ERROR: 'output/floor_ceiling.npz' not found!")
+        print(f"ERROR: '{os.path.join(output_dir, 'floor_ceiling.npz')}' not found!")
     except Exception as e:
         print(f"ERROR during merging: {e}")
 
@@ -1112,38 +1068,47 @@ def run_round2(model, seg_head, transform):
 # ============================================================================
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Complete LAS Processing and Two-Round Classification Pipeline")
+    parser.add_argument("las_file", help="Path to input LAS file")
+    parser.add_argument("--subsample-distance", type=float, default=0.010,
+                        help="Minimum distance between points for subsampling (default: 0.010)")
+    parser.add_argument("--output-dir", default="output",
+                        help="Output directory (default: output)")
+    args = parser.parse_args()
+
     print("="*80)
     print("COMPLETE LAS PROCESSING AND TWO-ROUND CLASSIFICATION PIPELINE")
     print("="*80)
-    
+
     # === LAS CONVERSION ===
-    print("\n🔄 Starting LAS conversion...")
-    conversion_success = run_las_converter()
-    
+    print("\nStarting LAS conversion...")
+    conversion_success = run_las_converter(
+        las_file=args.las_file,
+        subsample_distance=args.subsample_distance,
+        output_dir=args.output_dir,
+    )
+
     if not conversion_success:
-        print("❌ LAS conversion failed. Exiting pipeline.")
+        print("LAS conversion failed. Exiting pipeline.")
         sys.exit(1)
-    
+
     print("\n" + "="*50)
-    print("🚀 Starting Round 1: Floor/Ceiling Detection")
+    print("Starting Round 1: Floor/Ceiling Detection")
     print("="*50)
-    
+
     # === ROUND 1 EXECUTION ===
-    model, seg_head, transform = run_round1()
-    
+    model, seg_head, transform = run_round1(output_dir=args.output_dir)
+
     print("\n" + "="*50)
-    print("🎯 Starting Round 2: Sonata Classification")
+    print("Starting Round 2: Sonata Classification")
     print("="*50)
-    
+
     # === ROUND 2 EXECUTION ===
-    run_round2(model, seg_head, transform)
-    
+    run_round2(model, seg_head, transform, output_dir=args.output_dir)
+
     print("\n" + "="*80)
-    print("🎉 COMPLETE PIPELINE FINISHED!")
+    print("COMPLETE PIPELINE FINISHED!")
     print("="*80)
-    print("✅ Complete pipeline finished successfully!")
-    print("📊 Check the merged PLY files for the complete classified scene.")
-    print("\n💡 Command line usage:")
-    print(f"  python {sys.argv[0]} <las_file> [subsample_distance]")
-    print(f"  python {sys.argv[0]} alpha.las 0.010")
-    print(f"  python {sys.argv[0]} alpha.las 0.005")
+    print("Complete pipeline finished successfully!")
+    print("Check the merged PLY files for the complete classified scene.")

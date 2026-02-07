@@ -14,3 +14,14 @@ __pycache__/
 *.pyc
 .DS_Store
 .ipynb_checkpoints/
+
+# --- 3. Pipeline outputs ---
+output/
+output_clean/
+per_wall/
+temp_viz_*/
+*.ifc
+
+# --- 4. Backup files ---
+environment_full_backup.yml
+requirements_backup.txt

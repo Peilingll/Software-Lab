@@ -201,17 +201,12 @@ def main():
             # Try to parse ID like 'wall_1.ply'
             wall_id_str = basename.split('_')[1].split('.')[0]
             wall_id = int(wall_id_str)
-        except:
+        except (ValueError, IndexError):
             print(f"Warning: Could not parse wall ID from filename: {basename}. Skipping.")
             continue
         
-        # (REFINED) 根據 wall_id 獲取平面
         plane_params = planes.get(wall_id)
-        if plane_params is None:
-            # (REFINED) 應對 04_split_walls_corrected.py 中 i 和 plane_id 不匹配的情況
-            # 嘗試使用索引
-            plane_params = planes.get(wall_id) 
-            
+
         
         bbox = compute_wall_bbox(
             wf, 
