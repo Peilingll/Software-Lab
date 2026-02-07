@@ -106,4 +106,4 @@ Software-Lab/
 
 ## Acknowledgements
 
-This project is built upon [Sonata](https://github.com/facebookresearch/sonata) by Facebook Research.
+This project is built upon [Sonata](https://github.com/facebookresearch/sonata).
