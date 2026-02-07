@@ -32,4 +32,3 @@ dependencies:
     - plyfile
     - h5py
     - ifcopenshell
-    - torch-scatter

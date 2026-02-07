@@ -37,6 +37,9 @@ RUN conda env create -f environment.yml
 # Ensure all subsequent commands run inside the 'sonata2' environment
 SHELL ["conda", "run", "-n", "sonata2", "/bin/bash", "-c"]
 
+# 7.5 Install torch-scatter (needs torch available, so must be after conda env)
+RUN pip install torch-scatter -f https://data.pyg.org/whl/torch-2.5.0+cu124.html
+
 # 8. Copy Files
 # Note: huge data folders are excluded via .dockerignore
 COPY . .
