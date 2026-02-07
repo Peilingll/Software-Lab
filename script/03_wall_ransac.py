@@ -136,14 +136,16 @@ def main(in_ply, dist_thr=0.03, min_points=800, max_planes=50, vertical_tol_deg=
             remain = remain.select_by_index(inliers, invert=True)
             continue
 
-        
-      
-        out_cloud = remain.select_by_index(inliers, invert=True)
+        # Only remove main cluster points from remain (not all inliers).
+        # Non-main-cluster points stay in remain for future RANSAC iterations.
+        inliers_arr = np.array(inliers)
+        main_inlier_indices = inliers_arr[main_cluster_indices].tolist()
+        out_cloud = remain.select_by_index(main_inlier_indices, invert=True)
 
-        planes.append((plane_model, len(wall_points)))
-        
         # Assign unique color to this plane
         color = np.random.default_rng(k).random(3)
+        planes.append((plane_model, len(wall_points), color))
+
         in_cols = np.tile(color, (len(wall_points), 1))
         colored_pts.append(wall_points)
         colored_cols.append(in_cols)
@@ -175,11 +177,13 @@ def main(in_ply, dist_thr=0.03, min_points=800, max_planes=50, vertical_tol_deg=
     csv_path = os.path.join(out_dir, "walls_ransac_planes.csv")
     with open(csv_path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["plane_id", "a", "b", "c", "d", "num_points"])
-        for i, (pm, npts) in enumerate(planes, start=1):
+        w.writerow(["plane_id", "a", "b", "c", "d", "num_points", "r", "g", "b_color"])
+        for i, (pm, npts, color) in enumerate(planes, start=1):
             a, b, c, d = pm
-            
-            w.writerow([i, a, b, c, d, npts])
+            r_int = int(round(color[0] * 255))
+            g_int = int(round(color[1] * 255))
+            b_int = int(round(color[2] * 255))
+            w.writerow([i, a, b, c, d, npts, r_int, g_int, b_int])
 
     print(f"\nOutput files:")
     print(f"  Colored PLY: {out_path}")

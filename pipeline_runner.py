@@ -223,10 +223,13 @@ class PipelineRunner:
 
             # 6. 04_split_walls_corrected
             print("\n[5/7] Running 04_split_walls_corrected...")
-            success, _ = self.run_command([
-                sys.executable, str(self.script_04), 
-                str(ransac_ply), "--output", str(self.work_per_wall)
-            ])
+            plane_csv = self.work_output_clean / "walls_ransac_planes.csv"
+            cmd_04 = [
+                sys.executable, str(self.script_04),
+                str(ransac_ply), "--output", str(self.work_per_wall),
+                "--planes-csv", str(plane_csv)
+            ]
+            success, _ = self.run_command(cmd_04)
             if not success: raise Exception("04_split_walls_corrected (5/7) failed")
             if not self.work_per_wall.exists(): raise Exception(f"per_wall directory not found")
 
