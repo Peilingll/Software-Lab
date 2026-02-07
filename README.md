@@ -34,7 +34,7 @@ cd my_workspace
 docker run --gpus all \
   -v $(pwd):/app/data \
   -v $(pwd)/results:/app/batches \
-  peilingll/sonata-pipeline:v1
+  peilingll/sonata-pipeline:v2
 ```
 
 Docker will automatically pull the image on first run. No Python installation or manual weight downloads needed -- everything is included in the image.
@@ -75,7 +75,9 @@ docker compose logs -f          # View logs
 ```bash
 docker compose build
 docker tag softwarelab-pipeline peilingll/sonata-pipeline:v2
+docker tag softwarelab-pipeline peilingll/sonata-pipeline:latest
 docker push peilingll/sonata-pipeline:v2
+docker push peilingll/sonata-pipeline:latest
 ```
 
 ---
